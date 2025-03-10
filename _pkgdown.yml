@@ -1,5 +1,5 @@
 url: ~
 template:
   bootstrap: 5
-destination: docs
+destination: public
 
