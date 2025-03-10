@@ -20,6 +20,8 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    container:
+      image: rocker/geospatial:latest
     env:
       CACHE_CI: ${{ github.workspace }}/ci
       R_LIBS_USER: ${{ github.workspace }}/ci/lib
@@ -30,10 +32,6 @@ jobs:
         run: |
           mkdir -p $R_LIBS_USER
           echo "R_LIBS='$R_LIBS_USER'" > .Renviron
-      - name: Install R and dependencies
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.1.1'
       - name: Install remotes
         run: Rscript -e 'if (!require(remotes)) install.packages("remotes")'
       - name: Install dependencies
@@ -46,6 +44,8 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    container:
+      image: rocker/geospatial:latest
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -53,10 +53,6 @@ jobs:
         run: |
           mkdir -p $R_LIBS_USER
           echo "R_LIBS='$R_LIBS_USER'" > .Renviron
-      - name: Install R and dependencies
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.1.1'
       - name: Install dependencies
         run: Rscript -e 'devtools::install(dependencies = TRUE)'
       - name: Build site
@@ -66,3 +62,14 @@ jobs:
         with:
           name: public
           path: public
+
+  cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Docker image
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/docker
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
