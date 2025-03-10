@@ -1,75 +1,135 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-#
-# See https://github.com/r-lib/actions/tree/master/examples#readme for
-# additional example workflows available for the R community.
-
-name: R CI
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
+    branches:
+      - main
 
 jobs:
   checks:
     runs-on: ubuntu-latest
     container:
       image: rocker/geospatial:latest
-    env:
-      CACHE_CI: ${{ github.workspace }}/ci
-      R_LIBS_USER: ${{ github.workspace }}/ci/lib
-      NOT_CRAN: "true"
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up cache
-        run: |
-          mkdir -p ${{ env.R_LIBS_USER }}
-          echo "R_LIBS='${{ env.R_LIBS_USER }}'" > .Renviron
-      - name: Install remotes
-        run: Rscript -e 'if (!require(remotes)) install.packages("remotes")'
-      - name: Install dependencies
-        run: Rscript -e 'remotes::install_deps(dependencies = TRUE)'
-      - name: Update rcmdcheck
-        run: Rscript -e 'remotes::update_packages("rcmdcheck")'
-      - name: Run checks
-        run: Rscript -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")'
-    continue-on-error: true
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-  deploy:
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/ci
+          key: ${{ runner.os }}-r-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+      - name: Set up R environment
+        run: |
+          mkdir -p ${{ github.workspace }}/ci/lib
+          echo "R_LIBS='${{ github.workspace }}/ci/lib'" > .Renviron
+
+      - name: Install dependencies
+        run: |
+          R -q -e 'remotes::install_deps(dep = TRUE)'
+          R -q -e 'remotes::install_git("https://gitlab.irstea.fr/in-wop/airGRiwrm.git@181-simulation-water-losses-on-routed-flows-based-on-gr-groundwater-exchange-function")'
+
+      - name: Update rcmdcheck
+        run: R -q -e 'remotes::update_packages("rcmdcheck", repos = "http://cran.r-project.org")'
+
+      - name: Run checks
+        run: R -q -e 'rcmdcheck::rcmdcheck(args = c("--no-manual", "--no-vignettes"), build_args = c("--no-manual", "--no-build-vignettes"), error_on = "error")'
+        env:
+          NOT_CRAN: true
+
+  render_reports:
     runs-on: ubuntu-latest
+    needs: checks
     container:
       image: rocker/geospatial:latest
-    if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up cache
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/ci
+          key: ${{ runner.os }}-r-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+      - name: Set up R environment
         run: |
-          mkdir -p ${{ env.R_LIBS_USER }}
-          echo "R_LIBS='${{ env.R_LIBS_USER }}'" > .Renviron
+          mkdir -p ${{ github.workspace }}/ci/lib
+          echo "R_LIBS='${{ github.workspace }}/ci/lib'" > .Renviron
+
       - name: Install dependencies
-        run: Rscript -e 'devtools::install(dependencies = TRUE)'
-      - name: Build site
-        run: Rscript -e 'fairify::build_site()'
+        run: |
+          R -q -e 'remotes::install_deps(dep = TRUE)'
+          R -q -e 'remotes::install_git("https://gitlab.irstea.fr/in-wop/airGRiwrm.git@181-simulation-water-losses-on-routed-flows-based-on-gr-groundwater-exchange-function")'
+
+      - name: Install package
+        run: R -q -e 'devtools::install(quick = TRUE, upgrade = "never")'
+
+      - name: Render reports
+        run: R -q -e 'fairify::render_reports(clean_cache = TRUE, allow_duplicate_labels = TRUE)'
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v2
         with:
           name: public
           path: public
 
-  cache:
+  build_site:
     runs-on: ubuntu-latest
+    needs: render_reports
+    container:
+      image: rocker/geospatial:latest
     steps:
-      - name: Cache Docker image
-        uses: actions/cache@v3
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache R packages
+        uses: actions/cache@v2
         with:
-          path: /var/lib/docker
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          path: ${{ github.workspace }}/ci
+          key: ${{ runner.os }}-r-${{ hashFiles('**/DESCRIPTION') }}
           restore-keys: |
-            ${{ runner.os }}-docker-
+            ${{ runner.os }}-r-
+
+      - name: Set up R environment
+        run: |
+          mkdir -p ${{ github.workspace }}/ci/lib
+          echo "R_LIBS='${{ github.workspace }}/ci/lib'" > .Renviron
+
+      - name: Install dependencies
+        run: |
+          R -q -e 'remotes::install_deps(dep = TRUE)'
+          R -q -e 'remotes::install_git("https://gitlab.irstea.fr/in-wop/airGRiwrm.git@181-simulation-water-losses-on-routed-flows-based-on-gr-groundwater-exchange-function")'
+
+      - name: Install package
+        run: R -q -e 'devtools::install(quick = TRUE, upgrade = "never")'
+
+      - name: Build site
+        run: R -q -e 'fairify::build_site(clean_cache = TRUE, allow_duplicate_labels = TRUE, output_format = NULL)'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: public
+          path: public
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [render_reports, build_site]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: public
+          path: public
+
+      - name: List files
+        run: ls -lR public
