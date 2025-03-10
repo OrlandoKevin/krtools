@@ -30,8 +30,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up cache
         run: |
-          mkdir -p $R_LIBS_USER
-          echo "R_LIBS='$R_LIBS_USER'" > .Renviron
+          mkdir -p ${{ env.R_LIBS_USER }}
+          echo "R_LIBS='${{ env.R_LIBS_USER }}'" > .Renviron
       - name: Install remotes
         run: Rscript -e 'if (!require(remotes)) install.packages("remotes")'
       - name: Install dependencies
@@ -51,8 +51,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up cache
         run: |
-          mkdir -p $R_LIBS_USER
-          echo "R_LIBS='$R_LIBS_USER'" > .Renviron
+          mkdir -p ${{ env.R_LIBS_USER }}
+          echo "R_LIBS='${{ env.R_LIBS_USER }}'" > .Renviron
       - name: Install dependencies
         run: Rscript -e 'devtools::install(dependencies = TRUE)'
       - name: Build site
