@@ -1,4 +1,4 @@
-name: CI
+name: Pages
 
 on:
   push:
@@ -33,9 +33,6 @@ jobs:
 
       - name: Render reports
         run: R -q -e 'fairify::render_reports(clean_cache = TRUE, allow_duplicate_labels = TRUE)'
-
-      - name: List public directory
-        run: ls -lR public
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
