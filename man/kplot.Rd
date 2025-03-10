@@ -22,6 +22,5 @@ This function is a generic method for plotting objects. It uses the \code{UseMet
 }
 \examples{
 kplot(1:10)
-kplot.default(1:10)
 
 }

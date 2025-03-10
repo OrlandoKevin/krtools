@@ -6,20 +6,19 @@
 #' @param ... Additional arguments to be passed to the plotting method.
 #'
 #' @return A plot of the object `x`.
-#' 
+#'
 #' @export
 #'
 #' @examples
 #' kplot(1:10)
-#' kplot.default(1:10)
-#' 
+#'
 kplot <- function(x, ...) {
   UseMethod("kplot", x)
 }
 
 #' @export
 #' @rdname kplot
-#' 
+#'
 kplot.default <- function(x, ...) {
   plot(x, ...)
 }
