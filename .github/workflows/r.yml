@@ -72,7 +72,7 @@ jobs:
         run: R -q -e 'fairify::render_reports(clean_cache = TRUE, allow_duplicate_labels = TRUE)'
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: public
           path: public
@@ -110,7 +110,7 @@ jobs:
         run: R -q -e 'fairify::build_site(clean_cache = TRUE, allow_duplicate_labels = TRUE, output_format = NULL)'
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: public
           path: public
@@ -123,7 +123,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: public
           path: public
