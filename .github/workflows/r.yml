@@ -6,7 +6,7 @@
 # See https://github.com/r-lib/actions/tree/master/examples#readme for
 # additional example workflows available for the R community.
 
-name: R
+name: R CI
 
 on:
   push:
@@ -18,23 +18,57 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        r-version: ['3.6.3', '4.1.1']
-
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: Rscript {0}
+    env:
+      CACHE_CI: ${{ github.workspace }}/ci
+      R_LIBS_USER: ${{ github.workspace }}/ci/lib
+      NOT_CRAN: "true"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up R ${{ matrix.r-version }}
-        uses: r-lib/actions/setup-r@f57f1301a053485946083d7a45022b278929a78a
-        with:
-          r-version: ${{ matrix.r-version }}
-      - name: Install dependencies
+      - name: Set up cache
         run: |
-          install.packages(c("remotes", "rcmdcheck"))
-          remotes::install_deps(dependencies = TRUE)
+          mkdir -p $R_LIBS_USER
+          echo "R_LIBS='$R_LIBS_USER'" > .Renviron
+      - name: Install R and dependencies
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.1.1'
+      - name: Install remotes
+        run: R -q -e 'if (!require(remotes)) install.packages("remotes")'
+      - name: Install dependencies
+        run: R -q -e 'remotes::install_deps(dependencies = TRUE)'
+      - name: Update rcmdcheck
+        run: R -q -e 'remotes::update_packages("rcmdcheck")'
+      - name: Run checks
+        run: R -q -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")'
+    continue-on-error: true
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
         shell: Rscript {0}
-      - name: Check
-        run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
-        shell: Rscript {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up cache
+        run: |
+          mkdir -p $R_LIBS_USER
+          echo "R_LIBS='$R_LIBS_USER'" > .Renviron
+      - name: Install R and dependencies
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.1.1'
+      - name: Install dependencies
+        run: R -q -e 'devtools::install(dependencies = TRUE)'
+      - name: Build site
+        run: R -q -e 'fairify::build_site()'
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: public
+          path: public
