@@ -20,9 +20,6 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: Rscript {0}
     env:
       CACHE_CI: ${{ github.workspace }}/ci
       R_LIBS_USER: ${{ github.workspace }}/ci/lib
@@ -38,21 +35,18 @@ jobs:
         with:
           r-version: '4.1.1'
       - name: Install remotes
-        run: R -q -e 'if (!require(remotes)) install.packages("remotes")'
+        run: Rscript -e 'if (!require(remotes)) install.packages("remotes")'
       - name: Install dependencies
-        run: R -q -e 'remotes::install_deps(dependencies = TRUE)'
+        run: Rscript -e 'remotes::install_deps(dependencies = TRUE)'
       - name: Update rcmdcheck
-        run: R -q -e 'remotes::update_packages("rcmdcheck")'
+        run: Rscript -e 'remotes::update_packages("rcmdcheck")'
       - name: Run checks
-        run: R -q -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")'
+        run: Rscript -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")'
     continue-on-error: true
 
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    defaults:
-      run:
-        shell: Rscript {0}
     steps:
       - uses: actions/checkout@v4
       - name: Set up cache
@@ -64,11 +58,11 @@ jobs:
         with:
           r-version: '4.1.1'
       - name: Install dependencies
-        run: R -q -e 'devtools::install(dependencies = TRUE)'
+        run: Rscript -e 'devtools::install(dependencies = TRUE)'
       - name: Build site
-        run: R -q -e 'fairify::build_site()'
+        run: Rscript -e 'fairify::build_site()'
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: public
           path: public
