@@ -1,36 +1,85 @@
-# This is a basic workflow to help you get started with Actions
 
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  render_reports:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    needs: checks
+    container:
+      image: rocker/geospatial:latest
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/ci
+          key: ${{ runner.os }}-r-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+      - name: Set up R environment
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          mkdir -p ${{ github.workspace }}/ci/lib
+          echo "R_LIBS='${{ github.workspace }}/ci/lib'" > .Renviron
+      - name: Install dependencies
+        run: |
+          R -q -e 'remotes::install_deps(dep = TRUE)'
+      - name: Install package
+        run: R -q -e 'devtools::install(quick = TRUE, upgrade = "never")'
+
+      - name: Render reports
+        run: R -q -e 'fairify::render_reports(clean_cache = TRUE, allow_duplicate_labels = TRUE)'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+
+  build_site:
+    runs-on: ubuntu-latest
+    needs: render_reports
+    container:
+      image: rocker/geospatial:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/ci
+          key: ${{ runner.os }}-r-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+      - name: Set up R environment
+        run: |
+          mkdir -p ${{ github.workspace }}/ci/lib
+          echo "R_LIBS='${{ github.workspace }}/ci/lib'" > .Renviron
+      - name: Install dependencies
+        run: |
+          R -q -e 'remotes::install_deps(dep = TRUE)'
+      - name: Install package
+        run: R -q -e 'devtools::install(quick = TRUE, upgrade = "never")'
+
+      - name: Build site
+        run: R -q -e 'fairify::build_site(clean_cache = TRUE, allow_duplicate_labels = TRUE, output_format = NULL)'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [render_reports, build_site]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List files
+        run: ls -lR docs
