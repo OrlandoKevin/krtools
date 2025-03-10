@@ -1,4 +1,3 @@
-
 name: CI
 
 on:
@@ -35,6 +34,9 @@ jobs:
       - name: Render reports
         run: R -q -e 'fairify::render_reports(clean_cache = TRUE, allow_duplicate_labels = TRUE)'
 
+      - name: List public directory
+        run: ls -lR public
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -70,6 +72,9 @@ jobs:
       - name: Build site
         run: R -q -e 'fairify::build_site(clean_cache = TRUE, allow_duplicate_labels = TRUE, output_format = NULL)'
 
+      - name: List public directory
+        run: ls -lR public
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -91,3 +96,9 @@ jobs:
 
       - name: List files
         run: ls -lR public
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
