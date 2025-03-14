@@ -3,11 +3,14 @@
 \name{kplot}
 \alias{kplot}
 \alias{kplot.default}
-\title{kplot Function}
+\alias{kplot.data.frame}
+\title{Generic plot functions}
 \usage{
 kplot(x, ...)
 
 \method{kplot}{default}(x, ...)
+
+\method{kplot}{data.frame}(x, interactive = interactive(), output_format, ...)
 }
 \arguments{
 \item{x}{An object to be plotted.}
@@ -18,9 +21,10 @@ kplot(x, ...)
 A plot of the object \code{x}.
 }
 \description{
-This function is a generic method for plotting objects. It uses the \code{UseMethod} function to dispatch the appropriate method based on the class of the object \code{x}.
+This function is a generic method for plotting objects.
 }
 \examples{
+# Defaults
 kplot(1:10)
 
 }

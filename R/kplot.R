@@ -1,6 +1,6 @@
-#' kplot Function
+#' Generic plot functions
 #'
-#' This function is a generic method for plotting objects. It uses the `UseMethod` function to dispatch the appropriate method based on the class of the object `x`.
+#' This function is a generic method for plotting objects.
 #'
 #' @param x An object to be plotted.
 #' @param ... Additional arguments to be passed to the plotting method.
@@ -10,6 +10,7 @@
 #' @export
 #'
 #' @examples
+#' # Defaults
 #' kplot(1:10)
 #'
 kplot <- function(x, ...) {
@@ -21,4 +22,13 @@ kplot <- function(x, ...) {
 #'
 kplot.default <- function(x, ...) {
   plot(x, ...)
+}
+
+#' @export
+#' @rdname kplot
+#'
+kplot.data.frame <- function(
+  x, interactive = interactive(), output_format, ...
+) {
+
 }
