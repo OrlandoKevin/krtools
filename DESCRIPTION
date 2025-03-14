@@ -7,6 +7,11 @@ Description: What the package does (one paragraph).
 License: GPL-3
 Depends: 
     fairify
+Imports:
+    ggplot2,
+    dplyr,
+    magrittr,
+    tidyr
 Remotes: 
     git::https://forgemia.inra.fr/umr-g-eau/fairify.git
 Encoding: UTF-8
